@@ -2,6 +2,15 @@
 
 小型 CLI：透過 Postman API 取得/更新 Collection，並支援以 AI 操作檔（ops.json）批次新增/修改請求，並在名稱末端自動加註「[AI]」。
 
+> 重要：開始任何操作（update、ai、patch 等）之前，請先執行 `get` 取得 Postman 上的最新 Collection。
+>
+> 這能確保本地資料與遠端同步，避免覆蓋或衝突。
+>
+> 範例：
+> ```bash
+> node postman.js get --env ./postman.env.json --collectionUid <uid> --out ./.tmp/collection.json
+> ```
+
 ## 環境需求
 - Node.js 18+（建議）
 - 可存取網路（呼叫 Postman API）
