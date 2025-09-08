@@ -1,0 +1,33 @@
+{
+  "base": ["example"],
+  "operations": [
+    { "kind": "folder", "path": ["範例區", "子資料夾（範例）"] },
+    {
+      "kind": "request",
+      "path": ["範例區", "子資料夾（範例）"],
+      "name": "範例 GET 請求",
+      "method": "GET",
+      "url": {
+        "raw": "{{url}}/example/:id/resource?foo=bar",
+        "host": ["{{url}}"],
+        "path": ["example", ":id", "resource"],
+        "query": [{ "key": "foo", "value": "bar" }],
+        "variable": [{ "key": "id", "value": "123" }]
+      },
+      "description": "說明:\n- 這是一個示範 GET 請求。\n- 可依實際 API 替換路徑與查詢參數。"
+    },
+    {
+      "kind": "request",
+      "path": ["範例區", "子資料夾（範例）"],
+      "name": "範例 POST 請求",
+      "method": "POST",
+      "url": {
+        "raw": "{{url}}/example/create",
+        "host": ["{{url}}"],
+        "path": ["example", "create"]
+      },
+      "body": { "mode": "raw", "raw": "{\n  \"name\": \"demo\",\n  \"note\": \"example payload\"\n}", "options": { "raw": { "language": "json" } } },
+      "description": "說明:\n- 這是一個示範 POST 請求，包含 JSON body。\n- 可依實際 API 調整欄位。"
+    }
+  ]
+}
