@@ -146,6 +146,49 @@ AI 操作檔（ops.json）格式示例（postman.ops.patch.new.json）：
 }
 ```
 
+### 以關鍵字查詢 API/文件（精簡輸出）
+為了避免讓 Codex/AI 讀取整份龐大的 collection.json，可用 `getApi` 依關鍵字輸出精簡結果。
+
+```bash
+# 優先從本地 ./.tmp/collection.json 搜尋；若不存在則改為遠端抓取。
+node postman.js getApi \
+  --env ./postman.env.json \
+  --query "訂單 建立" \
+  --in ./.tmp/collection.json \
+  --out ./.tmp/api_search.json \
+  --full false \
+  --limit 50
+```
+
+- `--query`：空白分隔的關鍵字，全部需符合（AND）。
+- `--in`：指定本地集合檔（預設為 `./.tmp/collection.json`，若不存在則自動改用遠端 API）。
+- `--out`：將結果輸出為精簡 JSON；未提供時輸出到 stdout。
+- `--full`：`true` 時包含完整 `request` 物件（預設 `false`）。
+- `--limit`：限制回傳項目數量（預設不限制）。
+
+輸出格式（示意）：
+```json
+{
+  "query": "訂單 建立",
+  "matchedCount": 3,
+  "items": [
+    {
+      "path": ["訂單", "建立訂單"],
+      "name": "建立訂單",
+      "method": "POST",
+      "url": "{{baseUrl}}/orders",
+      "description": "建立訂單 API 說明"
+      // full=true 時會新增: request
+    }
+  ]
+}
+```
+
+說明：
+- 比對欄位包含：請求名稱、HTTP 方法、URL、節點/請求的描述。
+- `path` 會呈現資料夾層級與請求名稱，方便定位來源。
+- 若資料夾描述有符合關鍵字，也會附於項目的 `folders` 以供參考。
+
 ## 常見問題
 - 權限錯誤：請確認 `postmanApiKey` 正確且擁有該 collection 的存取權。
 - 網路逾時：請稍後重試或確認 CI/環境網路設定。

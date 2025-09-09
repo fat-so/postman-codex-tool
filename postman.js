@@ -291,6 +291,107 @@ async function main() {
     return;
   }
 
+  if (cmd === 'getApi') {
+    // Options:
+    // --query "keywords" (required)
+    // --in <file> (optional; local collection file; defaults to ./.tmp/collection.json if exists; otherwise fetches remote)
+    // --out <file> (optional; write compact search results)
+    // --full <true|false> (optional; include full request object; default false)
+    // --limit <n> (optional; max items)
+    const query = (args.query || args.q || '').trim();
+    if (!query) {
+      console.error('Missing --query "keywords" for getApi');
+      process.exit(1);
+    }
+    const full = String(args.full ?? 'false').toLowerCase() === 'true';
+    const limit = Number(args.limit || 0) || 0;
+
+    const preferredLocal = args.in || args.input || './.tmp/collection.json';
+    let source;
+    if (preferredLocal && fs.existsSync(preferredLocal)) {
+      source = readJson(preferredLocal);
+    } else {
+      source = await getCollection({ apiKey, collectionUid });
+    }
+    const root = source.collection || source;
+
+    // Build keywords array (space-separated); case-insensitive contains matching
+    const keywords = query.split(/\s+/).filter(Boolean).map(s => s.toLowerCase());
+
+    // Traverse collection to find matching requests and folder descriptions
+    const results = [];
+
+    const toText = (val) => {
+      if (!val) return '';
+      if (typeof val === 'string') return val;
+      try { return JSON.stringify(val); } catch { return String(val); }
+    };
+
+    const urlToRaw = (u) => {
+      if (!u) return '';
+      if (typeof u === 'string') return u;
+      if (u.raw) return u.raw;
+      const host = Array.isArray(u.host) ? u.host.join('.') : (u.host || '');
+      const pathSeg = Array.isArray(u.path) ? '/' + u.path.join('/') : '';
+      let q = '';
+      if (Array.isArray(u.query) && u.query.length) {
+        q = '?' + u.query.map(e => `${encodeURIComponent(e.key)}=${encodeURIComponent(e.value ?? '')}`).join('&');
+      }
+      return `${host}${pathSeg}${q}`;
+    };
+
+    const matchesAll = (hay) => {
+      const h = toText(hay).toLowerCase();
+      return keywords.every(k => h.includes(k));
+    };
+
+    const visit = (node, pathArr = [], folderDescChain = []) => {
+      if (!node) return;
+      const name = node.name || '';
+      const desc = node.description || '';
+      const nextFolderDescs = folderDescChain;
+      if (Array.isArray(node.item)) {
+        // folder
+        const folderMatches = matchesAll(name) || matchesAll(desc);
+        const chain = folderMatches ? [...folderDescChain, { path: [...pathArr, name], description: toText(desc) }] : folderDescChain;
+        for (const it of node.item) {
+          visit(it, [...pathArr, name], chain);
+        }
+      } else if (node.request) {
+        const method = node.request?.method || '';
+        const urlRaw = urlToRaw(node.request?.url);
+        const reqDesc = node.request?.description || '';
+        const haystack = [name, method, urlRaw, desc, reqDesc].join('\n');
+        if (matchesAll(haystack)) {
+          const item = {
+            path: [...pathArr, name],
+            name,
+            method,
+            url: urlRaw,
+            description: toText(desc || reqDesc || ''),
+          };
+          if (full) item.request = node.request;
+          if (folderDescChain.length) item.folders = folderDescChain;
+          results.push(item);
+        }
+      }
+    };
+
+    visit(root, [], []);
+
+    const sliced = limit > 0 ? results.slice(0, limit) : results;
+    const outObj = {
+      query,
+      matchedCount: results.length,
+      items: sliced,
+    };
+
+    const out = args.out || args.output;
+    if (out) writeJson(out, outObj);
+    else console.log(JSON.stringify(outObj, null, 2));
+    return;
+  }
+
   console.error(`Unknown command: ${cmd}`);
   process.exit(1);
 }
